@@ -1,60 +1,46 @@
-# OpenCV program to detect face in real time
-# import libraries of python OpenCV 
-# where its functionality resides
+import pygame as pg
 import cv2 
 
-# load the required trained XML classifiers
-# https://github.com/opencv/opencv/tree/master
-# data/haarcascades/haarcascade_frontalface_default.xml
-# Trained XML classifiers describes some features of some
-# object we want to detect a cascade function is trained
-# from a lot of positive(faces) and negative(non-faces)
-# images.
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
-# https://github.com/opencv/opencv/tree/master
-# /data/haarcascades/haarcascade_eye.xml
-# Trained XML file for detecting eyes
-eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml') 
+camera = cv2.VideoCapture(0)
+frame_width = int(camera.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-# capture frames from a camera
-cap = cv2.VideoCapture(0)
+pg.init()
 
-# loop runs if capturing has been initialized.
-while 1: 
+WIDTH, HEIGHT = 640, 480
+screen = pg.display.set_mode((WIDTH, HEIGHT))
 
-    # reads frames from a camera
-    ret, img = cap.read() 
-
-    # convert to gray scale of each frames
+def detect_face(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    return face_cascade.detectMultiScale(gray, 1.3, 5)
 
-    # Detects faces of different sizes in the input image
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+running = True
+while running:
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            running = False
 
-    for (x,y,w,h) in faces:
-        # To draw a rectangle in a face 
-        cv2.rectangle(img,(x,y),(x+w,y+h),(255,255,0),2) 
-        roi_gray = gray[y:y+h, x:x+w]
-        roi_color = img[y:y+h, x:x+w]
+    screen.fill((255, 255, 255))
 
-        # Detects eyes of different sizes in the input image
-        eyes = eye_cascade.detectMultiScale(roi_gray) 
 
-        #To draw a rectangle in eyes
-        for (ex,ey,ew,eh) in eyes:
-            cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,127,255),2)
+    ret, img = camera.read() 
+    face_coords = detect_face(img)
+    face_center_x = 0
+    face_center_y = 0
+    for x, y, w, h in face_coords:
+        face_center_x = x+w/2
+        face_center_y = y+h/2
+    
+    pg.draw.circle(screen, (0, 0, 0), (WIDTH - face_center_x, face_center_y), 5)
 
-    # Display an image in a window
-    cv2.imshow('img',img)
-
-    # Wait for Esc key to stop
-    k = cv2.waitKey(30) & 0xff
-    if k == 27:
-        break
+    pg.display.flip()
 
 # Close the window
-cap.release()
+camera.release()
 
 # De-allocate any associated memory usage
 cv2.destroyAllWindows()
+
+pg.quit()
